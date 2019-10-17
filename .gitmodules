@@ -1,0 +1,22 @@
+
+[submodule "external/keras"]
+ path = external/keras
+ url = https://github.com/fchollet/keras.git
+[submodule "external/Mesh_Reconstruction"]
+ path = external/Mesh_Reconstruction
+ url = https://github.com/CURG/Mesh_Reconstruction.git
+[submodule "external/binvox-rw-py"]
+ path = external/binvox-rw-py
+ url = https://github.com/CURG/binvox-rw-py.git
+[submodule "external/python-pcl"]
+ path = external/python-pcl
+ url = https://github.com/ShapeCompletion3D/python-pcl.git
+[submodule "external/Curvox"]
+ path = external/Curvox
+ url = https://github.com/jvarley/curvox.git
+[submodule "external/PyMCubes"]
+ path = external/PyMCubes
+ url = https://github.com/pmneila/PyMCubes.git
+[submodule "external/pycollada"]
+ path = external/pycollada
+ url = https://github.com/pycollada/pycollada.git
