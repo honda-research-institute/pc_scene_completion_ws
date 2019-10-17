@@ -18,7 +18,7 @@ import pc_pipeline_msgs.msg
 import pc_object_completion_cnn.srv
 from sensor_msgs import point_cloud2
 
-import curvox.pc_vox_utils
+import curvox.utils
 import curvox.mesh_conversions
 import curvox.cloud_conversions
 
