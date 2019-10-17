@@ -42,8 +42,7 @@ class MeshCompletionServer(object):
 
         self.post_process_executable = "mesh_reconstruction"
 
-        self._feedback = pc_
-import curvpipeline_msgs.msg.CompletePartialCloudFeedback()
+        self._feedback = pc_pipeline_msgs.msg.CompletePartialCloudFeedback()
         self._result = pc_pipeline_msgs.msg.CompletePartialCloudResult()
 
         self._as = actionlib.SimpleActionServer(
