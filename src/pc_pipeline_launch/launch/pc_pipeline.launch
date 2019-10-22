@@ -43,9 +43,9 @@
 	<group  if="$(arg run_partial_mesh)">
 	       <node name="pc_partial_mesh" pkg="pc_object_completion_partial" type="partial_completion.py" output="screen"/>
 	</group>
-	<group  unless="$(arg run_partial_mesh)">
+	<!--group  unless="$(arg run_partial_mesh)">
 	       <node name="pc_cnn_mesh" pkg="pc_object_completion_cnn" type="mesh_completion_server.py" output="screen"/>
-	</group>
+	</group-->
 
 
 
