@@ -197,14 +197,17 @@ void SceneCompletionNode::point_cloud_to_mesh(pcl::PointCloud<pcl::PointXYZRGB>:
       }
     else{
       ROS_INFO_STREAM("object_completion_topic: " << object_completion_topic << " 2 " << std::endl);
-  
+
       client = &partial_client;
     }
-    
+
     //send goal to complete object client and get result back
+    ROS_INFO_STREAM("waitForServer()" << std::endl);
     client->waitForServer();
+    ROS_INFO_STREAM("sendGoalAndWait()" << std::endl);
     client->sendGoalAndWait(goal);
     pc_pipeline_msgs::CompletePartialCloudResultConstPtr result = client->getResult();
+    ROS_INFO_STREAM("here ..." << std::endl);
 
     //We have a mesh with an points in the camera frame
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr meshVerticesCameraFrame(new pcl::PointCloud<pcl::PointXYZRGB>());
