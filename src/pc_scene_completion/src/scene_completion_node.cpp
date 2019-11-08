@@ -27,11 +27,11 @@ SceneCompletionNode::SceneCompletionNode(ros::NodeHandle nh) :
     nh.getParam("world_frame", world_frame);
 
     // Set up dynamic reconfigure
-    reconfigure_server_.setCallback(boost::bind(&SceneCompletionNode::reconfigure_cb, this, _1, _2));    
+    reconfigure_server_.setCallback(boost::bind(&SceneCompletionNode::reconfigure_cb, this, _1, _2));
 
     // Construct subscribers and publishers
     cloud_sub_ = nh.subscribe(filtered_cloud_topic, 1, &SceneCompletionNode::pcl_cloud_cb, this);
-    
+
     as_.start();
 
     ROS_INFO("SceneCompletionNode Initialized: ");
@@ -114,7 +114,7 @@ void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalCon
     ROS_INFO("Extracting Clusters");
     std::vector<pcl::PointIndices> cluster_indices;
     pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
-    ec.setClusterTolerance (cluster_tolerance); // 2cm  
+    ec.setClusterTolerance (cluster_tolerance); // 2cm
     ec.setMinClusterSize (min_cluster_size);
     ec.setMaxClusterSize (max_cluster_size);
     ec.setSearchMethod (tree);
@@ -134,7 +134,7 @@ void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalCon
 
     //this is the transform from camera to world
     pcl_ros::transformAsMatrix(transformMsg, transformEigen);
-    
+
     for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
     {
         //this is the set of points corresponding to the visible region of a single object
@@ -158,7 +158,7 @@ void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalCon
 	result.poses.push_back(poseStampedMsg);
     }
 
-    
+
 
 
     as_.setSucceeded(result);
@@ -207,7 +207,6 @@ void SceneCompletionNode::point_cloud_to_mesh(pcl::PointCloud<pcl::PointXYZRGB>:
     ROS_INFO_STREAM("sendGoalAndWait()" << std::endl);
     client->sendGoalAndWait(goal);
     pc_pipeline_msgs::CompletePartialCloudResultConstPtr result = client->getResult();
-    ROS_INFO_STREAM("here ..." << std::endl);
 
     //We have a mesh with an points in the camera frame
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr meshVerticesCameraFrame(new pcl::PointCloud<pcl::PointXYZRGB>());
