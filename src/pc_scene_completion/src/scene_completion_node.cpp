@@ -7,10 +7,17 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/transforms.h>
+#include <sensor_msgs/PointCloud2.h>
 
 
 #include <iostream>
 #include <pcl/point_types.h>
+
+ros::Publisher cloud_pub;
+typedef pcl::PointXYZ PointT;
+typedef pcl::PointCloud<PointT> PointCloudT;
+
+std::string cloud_target_topic;
 
 SceneCompletionNode::SceneCompletionNode(ros::NodeHandle nh) :
     nh_(nh),
@@ -25,12 +32,14 @@ SceneCompletionNode::SceneCompletionNode(ros::NodeHandle nh) :
     nh.getParam("filtered_cloud_topic", filtered_cloud_topic);// /filter_pc
     nh.getParam("camera_frame", camera_frame);
     nh.getParam("world_frame", world_frame);
+    nh.getParam("/topics/cloud_target_topic", cloud_target_topic);
 
     // Set up dynamic reconfigure
     reconfigure_server_.setCallback(boost::bind(&SceneCompletionNode::reconfigure_cb, this, _1, _2));
 
     // Construct subscribers and publishers
     cloud_sub_ = nh.subscribe(filtered_cloud_topic, 1, &SceneCompletionNode::pcl_cloud_cb, this);
+    cloud_pub = nh.advertise<sensor_msgs::PointCloud2>(cloud_target_topic, 1);
 
     as_.start();
 
@@ -51,6 +60,8 @@ void SceneCompletionNode::pcl_cloud_cb(const sensor_msgs::PointCloud2ConstPtr &p
 {
     // Lock the buffer mutex while we're capturing a new point cloud
     boost::mutex::scoped_lock buffer_lock(buffer_mutex_);
+
+    ROS_INFO_STREAM("points_msg size = " <<  points_msg->width);
 
     // Convert to PCL cloud
     boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -219,6 +230,23 @@ void SceneCompletionNode::point_cloud_to_mesh(pcl::PointCloud<pcl::PointXYZRGB>:
         pcl_point.z = p.z;
         meshVerticesCameraFrame->points.push_back(pcl_point);
     }
+
+    // publish without RGB data
+    PointCloudT::Ptr my_cloud_camera_frame(new PointCloudT);
+    for(int i =0; i < result->mesh.vertices.size(); i++)
+    {
+        geometry_msgs::Point p = result->mesh.vertices.at(i);
+        pcl::PointXYZ my_cloud; // DO I need to do new for every point, or is += on a pointcloud a copy constructor
+        my_cloud.x = p.x;
+        my_cloud.y = p.y;
+        my_cloud.z = p.z;
+        my_cloud_camera_frame->points.push_back(my_cloud);
+    }
+    sensor_msgs::PointCloud2 cloud_cf;
+    pcl::toROSMsg(*my_cloud_camera_frame, cloud_cf);
+    cloud_cf.header.frame_id = camera_frame;
+    ROS_INFO_STREAM("Publishing point cloud result from CNN.");
+    cloud_pub.publish(cloud_cf);
 
     //now we have a pointcloud in camera frame
     //lets put it in world frame, so that we can find the lowest point in the z world direction
