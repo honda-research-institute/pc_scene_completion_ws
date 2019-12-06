@@ -240,34 +240,34 @@ void SceneCompletionNode::point_cloud_to_mesh(pcl::PointCloud<pcl::PointXYZRGB>:
     ROS_INFO_STREAM("centroid.x(): " << centroid.x() << std::endl);
     ROS_INFO_STREAM("centroid.y(): " << centroid.y() << std::endl);
     ROS_INFO_STREAM("centroid.z(): " << centroid.z() << std::endl);
-    Eigen::Matrix4f world2Mesh = Eigen::Matrix4f::Identity ();
-    world2Mesh(0,3) = -centroid.x();
-    world2Mesh(1,3) = -centroid.y();
-    world2Mesh(2,3) = 0;
-    world2Mesh(3,3) = 1;
-    ROS_INFO_STREAM( "World2Mesh" << world2Mesh << std::endl);
-
-    //from world frame to mesh frame.
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr meshVerticesMeshFrame(new pcl::PointCloud<pcl::PointXYZRGB>());
-    pcl::transformPointCloud(*meshVerticesWorldFrame, *meshVerticesMeshFrame, world2Mesh);
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr partialCloudMeshFrame(new pcl::PointCloud<pcl::PointXYZRGB>());
-    pcl::transformPointCloud(*partialCloudWorldFrame, *partialCloudMeshFrame, world2Mesh);
-
-    //now we need to repackage the pointcloud as a mesh
-    for (int i =0 ; i < meshVerticesMeshFrame->size(); i++){
-        geometry_msgs::Point geom_p_msg;
-
-        geom_p_msg.x = meshVerticesMeshFrame->at(i).x;
-        geom_p_msg.y = meshVerticesMeshFrame->at(i).y;
-        geom_p_msg.z = meshVerticesMeshFrame->at(i).z;
-
-        meshMsg.vertices.push_back(geom_p_msg);
-    }
-
-     meshMsg.triangles = result->mesh.triangles;
-
-     pcl::toROSMsg(*partialCloudMeshFrame, partialCloudMsg);
-     ROS_INFO_STREAM("PARTIAL CLOUD SIZE: " << partialCloudMeshFrame->size() << std::endl);
+    // Eigen::Matrix4f world2Mesh = Eigen::Matrix4f::Identity ();
+    // world2Mesh(0,3) = -centroid.x();
+    // world2Mesh(1,3) = -centroid.y();
+    // world2Mesh(2,3) = 0;
+    // world2Mesh(3,3) = 1;
+    // ROS_INFO_STREAM( "World2Mesh" << world2Mesh << std::endl);
+    //
+    // //from world frame to mesh frame.
+    // pcl::PointCloud<pcl::PointXYZRGB>::Ptr meshVerticesMeshFrame(new pcl::PointCloud<pcl::PointXYZRGB>());
+    // pcl::transformPointCloud(*meshVerticesWorldFrame, *meshVerticesMeshFrame, world2Mesh);
+    // pcl::PointCloud<pcl::PointXYZRGB>::Ptr partialCloudMeshFrame(new pcl::PointCloud<pcl::PointXYZRGB>());
+    // pcl::transformPointCloud(*partialCloudWorldFrame, *partialCloudMeshFrame, world2Mesh);
+    //
+    // //now we need to repackage the pointcloud as a mesh
+    // for (int i =0 ; i < meshVerticesMeshFrame->size(); i++){
+    //     geometry_msgs::Point geom_p_msg;
+    //
+    //     geom_p_msg.x = meshVerticesMeshFrame->at(i).x;
+    //     geom_p_msg.y = meshVerticesMeshFrame->at(i).y;
+    //     geom_p_msg.z = meshVerticesMeshFrame->at(i).z;
+    //
+    //     meshMsg.vertices.push_back(geom_p_msg);
+    // }
+    //
+    //  meshMsg.triangles = result->mesh.triangles;
+    //
+    //  pcl::toROSMsg(*partialCloudMeshFrame, partialCloudMsg);
+    //  ROS_INFO_STREAM("PARTIAL CLOUD SIZE: " << partialCloudMeshFrame->size() << std::endl);
     //now we have a mesh with the origin at the center of the base in the world frame of reference
     //lets get the transform from world to mesh center
      ROS_INFO_STREAM("OBJECT POSE IN FRAME: " << world_frame << std::endl);
