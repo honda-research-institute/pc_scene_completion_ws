@@ -127,7 +127,7 @@ void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalCon
     tf::StampedTransform transformMsg;
     Eigen::Matrix4f transformEigen = Eigen::Matrix4f::Identity ();
 
-    listener.waitForTransform(world_frame, camera_frame, ros::Time::now(), ros::Duration(3.0));
+    listener.waitForTransform(world_frame, camera_frame, ros::Time(0), ros::Duration(3.0));
     listener.lookupTransform(world_frame, camera_frame, ros::Time(0), transformMsg);
 
     // transform from camera to world
@@ -138,8 +138,9 @@ void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalCon
 
     // set of points corresponding to the visible region of a single object
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZRGB>);
-    for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
+    for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++){
         cloud_cluster->points.push_back (cloud_full->points[*pit]); //*
+    }
 
     cloud_cluster->width = cloud_cluster->points.size ();
     cloud_cluster->height = 1;
@@ -155,7 +156,7 @@ void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalCon
   	result.partial_views.push_back(partialCloudMsg);
   	result.meshes.push_back(meshMsg);
   	result.poses.push_back(poseStampedMsg);
-    // }
+    // } // old for loop
     as_.setSucceeded(result);
 }
 
