@@ -88,20 +88,20 @@ void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalCon
     pc_pipeline_msgs::CompleteSceneResult result;
 
     ROS_INFO("Merging PointClouds");
-    //this is the merged set of captured pointclouds
+    // merged set of captured pointclouds
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_full(new pcl::PointCloud<pcl::PointXYZRGB>());
 
-     //We need to wait until n_clouds_per_recognition clouds have been received
-     ros::Rate warn_rate(1.0);
-     if(clouds_queue_.empty()){
-         ROS_WARN("Pointcloud buffer is empty!");
-         warn_rate.sleep();
+    // wait until n_clouds_per_recognition clouds have been received
+    ros::Rate warn_rate(1.0);
+    if(clouds_queue_.empty()){
+       ROS_WARN("Pointcloud buffer is empty!");
+       warn_rate.sleep();
     }
 
-     // grab mutex so noone else touches cloud list
+     // grab mutex so no one else touches cloud list
     boost::mutex::scoped_lock buffer_lock(buffer_mutex_);
 
-    //merge all clouds together
+    // merge all clouds together
     for(std::list<boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > >::const_iterator it = clouds_queue_.begin(); it != clouds_queue_.end(); ++it){
 	     *cloud_full += *(*it);
     }
@@ -127,16 +127,14 @@ void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalCon
     tf::StampedTransform transformMsg;
     Eigen::Matrix4f transformEigen = Eigen::Matrix4f::Identity ();
 
-    listener.waitForTransform(world_frame, camera_frame,
-                              ros::Time::now(), ros::Duration(3.0));
-    listener.lookupTransform(world_frame, camera_frame,
-                             ros::Time(0), transformMsg);
+    listener.waitForTransform(world_frame, camera_frame, ros::Time::now(), ros::Duration(3.0));
+    listener.lookupTransform(world_frame, camera_frame, ros::Time(0), transformMsg);
 
-    //this is the transform from camera to world
+    // transform from camera to world
     pcl_ros::transformAsMatrix(transformMsg, transformEigen);
 
     for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it){
-        //this is the set of points corresponding to the visible region of a single object
+        // set of points corresponding to the visible region of a single object
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZRGB>);
         for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
             cloud_cluster->points.push_back (cloud_full->points[*pit]); //*
@@ -167,18 +165,18 @@ void SceneCompletionNode::point_cloud_to_mesh(pcl::PointCloud<pcl::PointXYZRGB>:
                                               geometry_msgs::PoseStamped  &poseStampedMsg,
                                               sensor_msgs::PointCloud2 &partialCloudMsg ){
 
-    //convert pointcloud to ROS message
+    // convert pointcloud to ROS message
     pcl::PCLPointCloud2 partialCloudpc2CameraFrame;
     pcl::toPCLPointCloud2(*cloud, partialCloudpc2CameraFrame);
     sensor_msgs::PointCloud2 partialCloudMsgCameraFrame;
     pcl_conversions::fromPCL(partialCloudpc2CameraFrame, partialCloudMsgCameraFrame);
 
-    //build up complete object goal
+    // build up complete object goal
     pc_pipeline_msgs::CompletePartialCloudGoal goal;
     goal.partial_cloud = partialCloudMsgCameraFrame;
 
     actionlib::SimpleActionClient<pc_pipeline_msgs::CompletePartialCloudAction>* client;
-    if(object_completion_topic == "depth"){
+    if (object_completion_topic == "depth"){
     	ROS_INFO_STREAM("object_completion_topic: " << object_completion_topic << " 0 " << std::endl);
     	client = &depth_cnn_client;
     }
@@ -191,16 +189,16 @@ void SceneCompletionNode::point_cloud_to_mesh(pcl::PointCloud<pcl::PointXYZRGB>:
       client = &partial_client;
     }
 
-    //send goal to complete object client and get result back
+    // send goal to complete object client and get result back
     ROS_INFO_STREAM("waitForServer()" << std::endl);
     client->waitForServer();
     ROS_INFO_STREAM("sendGoalAndWait()" << std::endl);
     client->sendGoalAndWait(goal);
     pc_pipeline_msgs::CompletePartialCloudResultConstPtr result = client->getResult();
 
-    //We have a mesh with an points in the camera frame
+    // mesh with points in the camera frame
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr meshVerticesCameraFrame(new pcl::PointCloud<pcl::PointXYZRGB>());
-    for(int i =0; i < result->mesh.vertices.size(); i++){
+    for(int i = 0; i < result->mesh.vertices.size(); i++){
         geometry_msgs::Point p = result->mesh.vertices.at(i);
         pcl::PointXYZRGB pcl_point; // DO I need to do new for every point, or is += on a pointcloud a copy constructor
         pcl_point.x = p.x;
@@ -211,7 +209,7 @@ void SceneCompletionNode::point_cloud_to_mesh(pcl::PointCloud<pcl::PointXYZRGB>:
 
     // publish without RGB data
     PointCloudT::Ptr my_cloud_camera_frame(new PointCloudT);
-    for(int i =0; i < result->mesh.vertices.size(); i++){
+    for(int i = 0; i < result->mesh.vertices.size(); i++){
         geometry_msgs::Point p = result->mesh.vertices.at(i);
         pcl::PointXYZ my_cloud; // DO I need to do new for every point, or is += on a pointcloud a copy constructor
         my_cloud.x = p.x;
@@ -225,13 +223,13 @@ void SceneCompletionNode::point_cloud_to_mesh(pcl::PointCloud<pcl::PointXYZRGB>:
     ROS_INFO_STREAM("Publishing point cloud result from CNN.");
     cloud_pub.publish(cloud_cf);
 
-    //now we have a pointcloud in camera frame
-    //lets put it in world frame, so that we can find the lowest point in the z world direction
+    // now we have a pointcloud in camera frame
+    // lets put it in world frame, so that we can find the lowest point in the z world direction
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr meshVerticesWorldFrame(new pcl::PointCloud<pcl::PointXYZRGB>());
     pcl::transformPointCloud(*meshVerticesCameraFrame, *meshVerticesWorldFrame, transformEigen);
 
-    //now we have a pointcloud in camera frame
-    //lets put it in world frame, so that we can find the lowest point in the z world direction
+    // now we have a pointcloud in camera frame
+    // lets put it in world frame, so that we can find the lowest point in the z world direction
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr partialCloudWorldFrame(new pcl::PointCloud<pcl::PointXYZRGB>());
     pcl::transformPointCloud(*cloud, *partialCloudWorldFrame, transformEigen);
 
@@ -268,8 +266,8 @@ void SceneCompletionNode::point_cloud_to_mesh(pcl::PointCloud<pcl::PointXYZRGB>:
     //
     //  pcl::toROSMsg(*partialCloudMeshFrame, partialCloudMsg);
     //  ROS_INFO_STREAM("PARTIAL CLOUD SIZE: " << partialCloudMeshFrame->size() << std::endl);
-    //now we have a mesh with the origin at the center of the base in the world frame of reference
-    //lets get the transform from world to mesh center
+    // now we have a mesh with the origin at the center of the base in the world frame of reference
+    // lets get the transform from world to mesh center
      ROS_INFO_STREAM("OBJECT POSE IN FRAME: " << world_frame << std::endl);
      poseStampedMsg.header.frame_id = world_frame;
      poseStampedMsg.pose.orientation.w = 1.0;
