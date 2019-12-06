@@ -8,15 +8,12 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/transforms.h>
 #include <sensor_msgs/PointCloud2.h>
-
-
 #include <iostream>
 #include <pcl/point_types.h>
 
 ros::Publisher cloud_pub;
 typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT> PointCloudT;
-
 std::string cloud_target_topic;
 
 SceneCompletionNode::SceneCompletionNode(ros::NodeHandle nh) :
@@ -56,8 +53,7 @@ SceneCompletionNode::SceneCompletionNode(ros::NodeHandle nh) :
 //!
 //! This function takes a new point cloud message and addes it to the clouds_queue.
 //! If the queue is already at its max size, then the oldest cloud is removed.
-void SceneCompletionNode::pcl_cloud_cb(const sensor_msgs::PointCloud2ConstPtr &points_msg)
-{
+void SceneCompletionNode::pcl_cloud_cb(const sensor_msgs::PointCloud2ConstPtr &points_msg){
     // Lock the buffer mutex while we're capturing a new point cloud
     boost::mutex::scoped_lock buffer_lock(buffer_mutex_);
 
@@ -71,15 +67,13 @@ void SceneCompletionNode::pcl_cloud_cb(const sensor_msgs::PointCloud2ConstPtr &p
     clouds_queue_.push_back(cloud);
 
     // Increment the cloud index
-    while(clouds_queue_.size() > (unsigned)n_clouds_per_recognition) {
+    while(clouds_queue_.size() > (unsigned)n_clouds_per_recognition){
         clouds_queue_.pop_front();
     }
 }
 
-
 //update variables from config server
-void SceneCompletionNode::reconfigure_cb(pc_scene_completion::SceneCompletionConfig &config, uint32_t level)
-{
+void SceneCompletionNode::reconfigure_cb(pc_scene_completion::SceneCompletionConfig &config, uint32_t level){
     //change any member vars here
     n_clouds_per_recognition = config.n_clouds_per_recognition;
     cluster_tolerance = config.cluster_tolerance;
@@ -88,8 +82,7 @@ void SceneCompletionNode::reconfigure_cb(pc_scene_completion::SceneCompletionCon
 }
 
 
-void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalConstPtr & goal)
-{
+void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalConstPtr & goal){
 
     ROS_INFO("received new CompleteSceneGoal");
     pc_pipeline_msgs::CompleteSceneResult result;
@@ -100,7 +93,7 @@ void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalCon
 
      //We need to wait until n_clouds_per_recognition clouds have been received
      ros::Rate warn_rate(1.0);
-     if(clouds_queue_.empty()) {
+     if(clouds_queue_.empty()){
          ROS_WARN("Pointcloud buffer is empty!");
          warn_rate.sleep();
     }
@@ -109,12 +102,9 @@ void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalCon
     boost::mutex::scoped_lock buffer_lock(buffer_mutex_);
 
     //merge all clouds together
-    for(std::list<boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > >::const_iterator it = clouds_queue_.begin();
-	it != clouds_queue_.end();
-	++it)
-      {
-	*cloud_full += *(*it);
-      }
+    for(std::list<boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > >::const_iterator it = clouds_queue_.begin(); it != clouds_queue_.end(); ++it){
+	     *cloud_full += *(*it);
+    }
 
     //////////////////////////////////////////////////////////////////////////////////////
     //extract clusters from cloud
@@ -137,7 +127,6 @@ void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalCon
     tf::StampedTransform transformMsg;
     Eigen::Matrix4f transformEigen = Eigen::Matrix4f::Identity ();
 
-
     listener.waitForTransform(world_frame, camera_frame,
                               ros::Time::now(), ros::Duration(3.0));
     listener.lookupTransform(world_frame, camera_frame,
@@ -146,8 +135,7 @@ void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalCon
     //this is the transform from camera to world
     pcl_ros::transformAsMatrix(transformMsg, transformEigen);
 
-    for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
-    {
+    for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it){
         //this is the set of points corresponding to the visible region of a single object
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZRGB>);
         for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
@@ -161,29 +149,23 @@ void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalCon
         shape_msgs::Mesh meshMsg;
         sensor_msgs::PointCloud2 partialCloudMsg;
 
-	ROS_INFO("Calling point_cloud_to_mesh");
-	point_cloud_to_mesh(cloud_cluster, transformEigen, goal->object_completion_topic, meshMsg, poseStampedMsg, partialCloudMsg);
+      	ROS_INFO("Calling point_cloud_to_mesh");
+      	point_cloud_to_mesh(cloud_cluster, transformEigen, goal->object_completion_topic, meshMsg, poseStampedMsg, partialCloudMsg);
 
-	result.partial_views.push_back(partialCloudMsg);
-	result.meshes.push_back(meshMsg);
-	result.poses.push_back(poseStampedMsg);
+      	result.partial_views.push_back(partialCloudMsg);
+      	result.meshes.push_back(meshMsg);
+      	result.poses.push_back(poseStampedMsg);
     }
-
-
-
-
     as_.setSucceeded(result);
-
-
 }
 
 
 void SceneCompletionNode::point_cloud_to_mesh(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
                                               Eigen::Matrix4f transformEigen,
-					      std::string object_completion_topic,
+					                                    std::string object_completion_topic,
                                               shape_msgs::Mesh &meshMsg,
                                               geometry_msgs::PoseStamped  &poseStampedMsg,
-                                              sensor_msgs::PointCloud2 &partialCloudMsg ) {
+                                              sensor_msgs::PointCloud2 &partialCloudMsg ){
 
     //convert pointcloud to ROS message
     pcl::PCLPointCloud2 partialCloudpc2CameraFrame;
@@ -196,19 +178,16 @@ void SceneCompletionNode::point_cloud_to_mesh(pcl::PointCloud<pcl::PointXYZRGB>:
     goal.partial_cloud = partialCloudMsgCameraFrame;
 
     actionlib::SimpleActionClient<pc_pipeline_msgs::CompletePartialCloudAction>* client;
-    if(object_completion_topic == "depth")
-      {
-	ROS_INFO_STREAM("object_completion_topic: " << object_completion_topic << " 0 " << std::endl);
-	client = &depth_cnn_client;
-      }
-    else if (object_completion_topic=="depth_tactile")
-      {
-	ROS_INFO_STREAM("object_completion_topic: " << object_completion_topic << " 1 " << std::endl);
-	client = &depth_tactile_cnn_client;
-      }
+    if(object_completion_topic == "depth"){
+    	ROS_INFO_STREAM("object_completion_topic: " << object_completion_topic << " 0 " << std::endl);
+    	client = &depth_cnn_client;
+    }
+    else if (object_completion_topic=="depth_tactile"){
+    	ROS_INFO_STREAM("object_completion_topic: " << object_completion_topic << " 1 " << std::endl);
+    	client = &depth_tactile_cnn_client;
+    }
     else{
       ROS_INFO_STREAM("object_completion_topic: " << object_completion_topic << " 2 " << std::endl);
-
       client = &partial_client;
     }
 
@@ -221,8 +200,7 @@ void SceneCompletionNode::point_cloud_to_mesh(pcl::PointCloud<pcl::PointXYZRGB>:
 
     //We have a mesh with an points in the camera frame
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr meshVerticesCameraFrame(new pcl::PointCloud<pcl::PointXYZRGB>());
-    for(int i =0; i < result->mesh.vertices.size(); i++)
-    {
+    for(int i =0; i < result->mesh.vertices.size(); i++){
         geometry_msgs::Point p = result->mesh.vertices.at(i);
         pcl::PointXYZRGB pcl_point; // DO I need to do new for every point, or is += on a pointcloud a copy constructor
         pcl_point.x = p.x;
@@ -233,8 +211,7 @@ void SceneCompletionNode::point_cloud_to_mesh(pcl::PointCloud<pcl::PointXYZRGB>:
 
     // publish without RGB data
     PointCloudT::Ptr my_cloud_camera_frame(new PointCloudT);
-    for(int i =0; i < result->mesh.vertices.size(); i++)
-    {
+    for(int i =0; i < result->mesh.vertices.size(); i++){
         geometry_msgs::Point p = result->mesh.vertices.at(i);
         pcl::PointXYZ my_cloud; // DO I need to do new for every point, or is += on a pointcloud a copy constructor
         my_cloud.x = p.x;
@@ -277,7 +254,7 @@ void SceneCompletionNode::point_cloud_to_mesh(pcl::PointCloud<pcl::PointXYZRGB>:
     pcl::transformPointCloud(*partialCloudWorldFrame, *partialCloudMeshFrame, world2Mesh);
 
     //now we need to repackage the pointcloud as a mesh
-    for (int i =0 ; i < meshVerticesMeshFrame->size(); i++) {
+    for (int i =0 ; i < meshVerticesMeshFrame->size(); i++){
         geometry_msgs::Point geom_p_msg;
 
         geom_p_msg.x = meshVerticesMeshFrame->at(i).x;
