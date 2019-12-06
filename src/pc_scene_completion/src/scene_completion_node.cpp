@@ -107,7 +107,7 @@ void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalCon
     }
 
     //////////////////////////////////////////////////////////////////////////////////////
-    //extract clusters from cloud
+    // extract clusters from cloud
     //////////////////////////////////////////////////////////////////////////////////////
     pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
     tree->setInputCloud (cloud_full);
@@ -133,27 +133,29 @@ void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalCon
     // transform from camera to world
     pcl_ros::transformAsMatrix(transformMsg, transformEigen);
 
-    for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it){
-        // set of points corresponding to the visible region of a single object
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZRGB>);
-        for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
-            cloud_cluster->points.push_back (cloud_full->points[*pit]); //*
+    // for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it){
+    std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin ();
 
-        cloud_cluster->width = cloud_cluster->points.size ();
-        cloud_cluster->height = 1;
-        cloud_cluster->is_dense = true;
+    // set of points corresponding to the visible region of a single object
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZRGB>);
+    for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++)
+        cloud_cluster->points.push_back (cloud_full->points[*pit]); //*
 
-        geometry_msgs::PoseStamped poseStampedMsg;
-        shape_msgs::Mesh meshMsg;
-        sensor_msgs::PointCloud2 partialCloudMsg;
+    cloud_cluster->width = cloud_cluster->points.size ();
+    cloud_cluster->height = 1;
+    cloud_cluster->is_dense = true;
 
-      	ROS_INFO("Calling point_cloud_to_mesh");
-      	point_cloud_to_mesh(cloud_cluster, transformEigen, goal->object_completion_topic, meshMsg, poseStampedMsg, partialCloudMsg);
+    geometry_msgs::PoseStamped poseStampedMsg;
+    shape_msgs::Mesh meshMsg;
+    sensor_msgs::PointCloud2 partialCloudMsg;
 
-      	result.partial_views.push_back(partialCloudMsg);
-      	result.meshes.push_back(meshMsg);
-      	result.poses.push_back(poseStampedMsg);
-    }
+  	ROS_INFO("Calling point_cloud_to_mesh");
+  	point_cloud_to_mesh(cloud_cluster, transformEigen, goal->object_completion_topic, meshMsg, poseStampedMsg, partialCloudMsg);
+
+  	result.partial_views.push_back(partialCloudMsg);
+  	result.meshes.push_back(meshMsg);
+  	result.poses.push_back(poseStampedMsg);
+    // }
     as_.setSucceeded(result);
 }
 
