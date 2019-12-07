@@ -43,14 +43,16 @@
     ros::Subscriber cloud_sub_;
 
     actionlib::SimpleActionServer<pc_pipeline_msgs::CompleteSceneAction> as_;
-    
+
     actionlib::SimpleActionClient<pc_pipeline_msgs::CompletePartialCloudAction> depth_cnn_client;
     actionlib::SimpleActionClient<pc_pipeline_msgs::CompletePartialCloudAction> depth_tactile_cnn_client;
     actionlib::SimpleActionClient<pc_pipeline_msgs::CompletePartialCloudAction> partial_client;
-      
+
     //topic in which we listen for filtered pointclouds from
     //this is grabbed from the ros param server.
     std::string filtered_cloud_topic;
+    
+    float voxel_leaf_size;
 
     //counter to keep track of how many objects we have detected so that we can
     //give them each a unique name "mesh_" + str(partial_mesh_count++)

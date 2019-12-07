@@ -10,11 +10,13 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <iostream>
 #include <pcl/point_types.h>
+#include <pcl/filters/voxel_grid.h>
 
 ros::Publisher cloud_pub;
 typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT> PointCloudT;
 std::string cloud_target_topic;
+
 
 SceneCompletionNode::SceneCompletionNode(ros::NodeHandle nh) :
     nh_(nh),
@@ -30,6 +32,7 @@ SceneCompletionNode::SceneCompletionNode(ros::NodeHandle nh) :
     nh.getParam("camera_frame", camera_frame);
     nh.getParam("world_frame", world_frame);
     nh.getParam("/topics/cloud_target_topic", cloud_target_topic);
+    nh.getParam("/icp/voxel_leaf_size", voxel_leaf_size);
 
     // Set up dynamic reconfigure
     reconfigure_server_.setCallback(boost::bind(&SceneCompletionNode::reconfigure_cb, this, _1, _2));
@@ -220,8 +223,16 @@ void SceneCompletionNode::point_cloud_to_mesh(pcl::PointCloud<pcl::PointXYZRGB>:
         my_cloud.z = p.z;
         my_cloud_camera_frame->points.push_back(my_cloud);
     }
+
+    // voxel grid downsampling filtering
+    pcl::VoxelGrid<pcl::PointXYZ> sor;
+    sor.setInputCloud(my_cloud_camera_frame);
+    sor.setLeafSize(voxel_leaf_size, voxel_leaf_size, voxel_leaf_size);
+    PointCloudT::Ptr my_cloud_filtered (new PointCloudT);
+    sor.filter(*my_cloud_filtered);
+
     sensor_msgs::PointCloud2 cloud_cf;
-    pcl::toROSMsg(*my_cloud_camera_frame, cloud_cf);
+    pcl::toROSMsg(*my_cloud_filtered, cloud_cf);
     cloud_cf.header.frame_id = camera_frame;
     ROS_INFO_STREAM("Publishing point cloud result from CNN.");
     cloud_pub.publish(cloud_cf);
