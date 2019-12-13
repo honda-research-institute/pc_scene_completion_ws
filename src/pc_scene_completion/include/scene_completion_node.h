@@ -20,6 +20,9 @@
 #include <actionlib/server/simple_action_server.h>
 #include <actionlib/client/simple_action_client.h>
 
+typedef pcl::PointXYZ PointT;
+typedef pcl::PointCloud<PointT> PointCloudT;
+
 
   class SceneCompletionNode {
   public:
@@ -51,7 +54,7 @@
     //topic in which we listen for filtered pointclouds from
     //this is grabbed from the ros param server.
     std::string filtered_cloud_topic;
-    
+
     float voxel_leaf_size;
 
     //counter to keep track of how many objects we have detected so that we can
@@ -70,8 +73,8 @@
 
     // Mutex for managing buffery synchronization
     boost::mutex buffer_mutex_;
-    std::list<boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > > clouds_queue_;
-    void point_cloud_to_mesh(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
+    std::list<boost::shared_ptr<PointCloudT > > clouds_queue_;
+    void point_cloud_to_mesh(PointCloudT::Ptr cloud,
                              Eigen::Matrix4f transformEigen,
 			     std::string object_completion_topic,
                              shape_msgs::Mesh &meshMsg,
