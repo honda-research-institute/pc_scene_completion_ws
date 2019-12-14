@@ -11,13 +11,14 @@
 #include <iostream>
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
-
+#include <pcl/pcl_config.h>
+#include <time.h>
 
 ros::Publisher cloud_pub;
 typedef pcl::PointXYZ PointT;
 typedef PointCloudT PointCloudT;
 std::string cloud_target_topic;
-bool detailed_mesh;
+bool detailed_mesh, extract_clusters;
 
 SceneCompletionNode::SceneCompletionNode(ros::NodeHandle nh) :
     nh_(nh),
@@ -35,6 +36,7 @@ SceneCompletionNode::SceneCompletionNode(ros::NodeHandle nh) :
     nh.getParam("/topics/cloud_target_topic", cloud_target_topic);
     nh.getParam("/icp/voxel_leaf_size", voxel_leaf_size);
     nh.getParam("/flags/detailed_mesh", detailed_mesh);
+    nh.getParam("/flags/extract_clusters", extract_clusters);
 
     // Set up dynamic reconfigure
     reconfigure_server_.setCallback(boost::bind(&SceneCompletionNode::reconfigure_cb, this, _1, _2));
@@ -48,6 +50,7 @@ SceneCompletionNode::SceneCompletionNode(ros::NodeHandle nh) :
     as_.start();
 
     ROS_INFO("SceneCompletionNode Initialized: ");
+    std::cout << PCL_VERSION << std::endl;
     ROS_INFO_STREAM("filtered_cloud_topic: " << filtered_cloud_topic);
     ROS_INFO_STREAM("camera_frame: " << camera_frame);
     ROS_INFO_STREAM("world_frame: " << world_frame);
@@ -113,65 +116,80 @@ void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalCon
 	     *cloud_full += *(*it);
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////
-    // extract clusters from cloud
-    //////////////////////////////////////////////////////////////////////////////////////
-    pcl::search::KdTree<PointT>::Ptr tree (new pcl::search::KdTree<PointT>);
-    tree->setInputCloud (cloud_full);
+    if (extract_clusters){
+      // extract clusters from cloud
+      ROS_INFO("Extracting Clusters");
+      pcl::search::KdTree<PointT>::Ptr tree (new pcl::search::KdTree<PointT>);
+      tree->setInputCloud (cloud_full);
 
-    ROS_INFO("Extracting Clusters");
-    std::vector<pcl::PointIndices> cluster_indices;
-    ROS_INFO("Extracting Clusters 1");
-    pcl::EuclideanClusterExtraction<PointT> ec;
-    ROS_INFO("Extracting Clusters 2");
-    ec.setClusterTolerance (cluster_tolerance); // 2cm
-    ROS_INFO("Extracting Clusters 3");
-    ec.setMinClusterSize (min_cluster_size);
-    ROS_INFO("Extracting Clusters 4");
-    ec.setMaxClusterSize (max_cluster_size);
-    ROS_INFO("Extracting Clusters 5");
-    ec.setSearchMethod (tree);
-    ROS_INFO("Extracting Clusters 6");
-    ec.setInputCloud (cloud_full);
-    ROS_INFO("Extracting Clusters 7");
-    ec.extract (cluster_indices);
-    ROS_INFO("Extracting Clusters 8");
+      std::vector<pcl::PointIndices> cluster_indices;
+      pcl::EuclideanClusterExtraction<PointT> ec;
+      ec.setClusterTolerance (cluster_tolerance); // 2cm
+      ec.setMinClusterSize (min_cluster_size);
+      ec.setMaxClusterSize (max_cluster_size);
+      ec.setSearchMethod (tree);
+      ec.setInputCloud (cloud_full);
+      ec.extract (cluster_indices);
+      ROS_INFO_STREAM("no. of clusters found are: " << cluster_indices.size());
 
-    ROS_INFO("Looking up %s to %s transform", world_frame.c_str(), camera_frame.c_str());
-    tf::TransformListener listener;
-    tf::StampedTransform transformMsg;
-    Eigen::Matrix4f transformEigen = Eigen::Matrix4f::Identity ();
+      ROS_INFO("Looking up %s to %s transform", world_frame.c_str(), camera_frame.c_str());
+      tf::TransformListener listener;
+      tf::StampedTransform transformMsg;
+      Eigen::Matrix4f transformEigen = Eigen::Matrix4f::Identity ();
 
-    listener.waitForTransform(world_frame, camera_frame, ros::Time(0), ros::Duration(3.0));
-    listener.lookupTransform(world_frame, camera_frame, ros::Time(0), transformMsg);
+      listener.waitForTransform(world_frame, camera_frame, ros::Time(0), ros::Duration(3.0));
+      listener.lookupTransform(world_frame, camera_frame, ros::Time(0), transformMsg);
 
-    // transform from camera to world
-    pcl_ros::transformAsMatrix(transformMsg, transformEigen);
+      // transform from camera to world
+      pcl_ros::transformAsMatrix(transformMsg, transformEigen);
 
-    // for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it){
-    std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin ();
+      for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it){
 
-    // set of points corresponding to the visible region of a single object
-    PointCloudT::Ptr cloud_cluster (new PointCloudT);
-    for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++){
-        cloud_cluster->points.push_back (cloud_full->points[*pit]); //*
-    }
+        // set of points corresponding to the visible region of a single object
+        PointCloudT::Ptr cloud_cluster (new PointCloudT);
+        for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); pit++){
+            cloud_cluster->points.push_back (cloud_full->points[*pit]); //*
+        }
 
-    cloud_cluster->width = cloud_cluster->points.size ();
-    cloud_cluster->height = 1;
-    cloud_cluster->is_dense = true;
+        cloud_cluster->width = cloud_cluster->points.size ();
+        cloud_cluster->height = 1;
+        cloud_cluster->is_dense = true;
 
-    geometry_msgs::PoseStamped poseStampedMsg;
-    shape_msgs::Mesh meshMsg;
-    sensor_msgs::PointCloud2 partialCloudMsg;
+        geometry_msgs::PoseStamped poseStampedMsg;
+        shape_msgs::Mesh meshMsg;
+        sensor_msgs::PointCloud2 partialCloudMsg;
 
-  	ROS_INFO("Calling point_cloud_to_mesh");
-  	point_cloud_to_mesh(cloud_cluster, transformEigen, goal->object_completion_topic, meshMsg, poseStampedMsg, partialCloudMsg);
+      	ROS_INFO("Calling point_cloud_to_mesh");
+      	point_cloud_to_mesh(cloud_cluster, transformEigen, goal->object_completion_topic, meshMsg, poseStampedMsg, partialCloudMsg);
 
-  	result.partial_views.push_back(partialCloudMsg);
-  	result.meshes.push_back(meshMsg);
-  	result.poses.push_back(poseStampedMsg);
-    // } // old for loop
+      	result.partial_views.push_back(partialCloudMsg);
+      	result.meshes.push_back(meshMsg);
+      	result.poses.push_back(poseStampedMsg);
+      }
+  } else{
+      ROS_INFO("Not extracting clusters");
+      ROS_INFO("Looking up %s to %s transform", world_frame.c_str(), camera_frame.c_str());
+      tf::TransformListener listener;
+      tf::StampedTransform transformMsg;
+      Eigen::Matrix4f transformEigen = Eigen::Matrix4f::Identity ();
+
+      listener.waitForTransform(world_frame, camera_frame, ros::Time(0), ros::Duration(3.0));
+      listener.lookupTransform(world_frame, camera_frame, ros::Time(0), transformMsg);
+
+      // transform from camera to world
+      pcl_ros::transformAsMatrix(transformMsg, transformEigen);
+
+      geometry_msgs::PoseStamped poseStampedMsg;
+      shape_msgs::Mesh meshMsg;
+      sensor_msgs::PointCloud2 partialCloudMsg;
+
+      ROS_INFO("Calling point_cloud_to_mesh");
+      point_cloud_to_mesh(cloud_full, transformEigen, goal->object_completion_topic, meshMsg, poseStampedMsg, partialCloudMsg);
+
+      result.partial_views.push_back(partialCloudMsg);
+      result.meshes.push_back(meshMsg);
+      result.poses.push_back(poseStampedMsg);
+  }
     as_.setSucceeded(result);
 }
 
