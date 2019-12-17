@@ -10,6 +10,7 @@
 	<arg name="pc_filter/input_pc_topic"/>
 	<arg name="pc_filter/output_pc_topic"/>
 
+	<arg name="cnn_pc_input_topic"/>
 	<!-- If true, then the pointclouds are meshed by simply running them through marching cubes rather than shape completion -->
 	<!-- Alternatively, the shape completion node can be run on a machine with a sufficient gpu -->
 	<arg name="run_partial_mesh"/>
@@ -32,7 +33,7 @@
 
 	<!-- Exposes an action server to allow a client to request the currently filtered cloud be segmented, and meshed. -->
 	<group>
-	       <param name="filtered_cloud_topic" value="$(arg pc_filter/output_pc_topic)" />
+	       <param name="filtered_cloud_topic" value="$(arg cnn_pc_input_topic)" />
 	       <param name="camera_frame" value="$(arg pc_filter/observed_frame_id)" />
 	       <param name="world_frame" value="$(arg pc_filter/filtered_frame_id)" />
 

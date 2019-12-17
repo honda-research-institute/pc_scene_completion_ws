@@ -67,8 +67,8 @@ void SceneCompletionNode::pcl_cloud_cb(const sensor_msgs::PointCloud2ConstPtr &p
     // Lock the buffer mutex while we're capturing a new point cloud
     boost::mutex::scoped_lock buffer_lock(buffer_mutex_);
 
-    ROS_INFO_STREAM("points_msg size = " <<  points_msg->width);
 
+    ROS_INFO_STREAM("points_msg size = " <<  points_msg->width);
     // Convert to PCL cloud
     boost::shared_ptr<PointCloudT > cloud(new PointCloudT);
     pcl::fromROSMsg(*points_msg, *cloud);
