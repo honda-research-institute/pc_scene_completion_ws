@@ -15,8 +15,6 @@
 #include <time.h>
 
 ros::Publisher cloud_pub;
-typedef pcl::PointXYZ PointT;
-typedef PointCloudT PointCloudT;
 std::string cloud_target_topic;
 bool detailed_mesh, extract_clusters;
 
@@ -246,7 +244,7 @@ void SceneCompletionNode::point_cloud_to_mesh(PointCloudT::Ptr cloud,
       }
 
       // publish without RGB data
-      PointCloudT::Ptr my_cloud_camera_frame(new PointCloudT);
+      PointCloudT::Ptr my_cloud_camera_frame(new PointCloudT());
       for(int i = 0; i < result->mesh.vertices.size(); i++){
           geometry_msgs::Point p = result->mesh.vertices.at(i);
           pcl::PointXYZ my_cloud; // DO I need to do new for every point, or is += on a pointcloud a copy constructor
@@ -260,7 +258,7 @@ void SceneCompletionNode::point_cloud_to_mesh(PointCloudT::Ptr cloud,
       pcl::VoxelGrid<pcl::PointXYZ> sor;
       sor.setInputCloud(my_cloud_camera_frame);
       sor.setLeafSize(voxel_leaf_size, voxel_leaf_size, voxel_leaf_size);
-      PointCloudT::Ptr my_cloud_filtered (new PointCloudT);
+      PointCloudT::Ptr my_cloud_filtered (new PointCloudT());
       sor.filter(*my_cloud_filtered);
 
       sensor_msgs::PointCloud2 cloud_cf;
@@ -269,21 +267,33 @@ void SceneCompletionNode::point_cloud_to_mesh(PointCloudT::Ptr cloud,
       ROS_INFO_STREAM("Publishing point cloud result from CNN.");
       cloud_pub.publish(cloud_cf);
 
-      // now we have a pointcloud in camera frame
-      // lets put it in world frame, so that we can find the lowest point in the z world direction
-      PointCloudT::Ptr meshVerticesWorldFrame(new PointCloudT());
-      pcl::transformPointCloud(*meshVerticesCameraFrame, *meshVerticesWorldFrame, transformEigen);
 
-      // now we have a pointcloud in camera frame
-      // lets put it in world frame, so that we can find the lowest point in the z world direction
-      PointCloudT::Ptr partialCloudWorldFrame(new PointCloudT());
-      pcl::transformPointCloud(*cloud, *partialCloudWorldFrame, transformEigen);
+      // NOTE this section of the code gives the pose of the mesh
+      // // now we have a pointcloud in camera frame
+      // // lets put it in world frame, so that we can find the lowest point in the z world direction
+      // PointCloudT::Ptr meshVerticesWorldFrame(new PointCloudT());
+      // pcl::transformPointCloud(*meshVerticesCameraFrame, *meshVerticesWorldFrame, transformEigen);
+      //
+      // // now we have a pointcloud in camera frame
+      // // lets put it in world frame, so that we can find the lowest point in the z world direction
+      // PointCloudT::Ptr partialCloudWorldFrame(new PointCloudT());
+      // pcl::transformPointCloud(*cloud, *partialCloudWorldFrame, transformEigen);
+      //
+      // Eigen::Vector4f centroid (0.f, 0.f, 0.f, 1.f);
+      // pcl::compute3DCentroid (*meshVerticesWorldFrame, centroid); centroid.w () = 1.f;
+      //
+      // ROS_INFO_STREAM("centroid.x(): " << centroid.x() << std::endl);
+      // ROS_INFO_STREAM("centroid.y(): " << centroid.y() << std::endl);
+      // ROS_INFO_STREAM("centroid.z(): " << centroid.z() << std::endl);
+      // ROS_INFO_STREAM("OBJECT POSE IN FRAME: " << world_frame << std::endl);
+      // poseStampedMsg.header.frame_id = world_frame;
+      // poseStampedMsg.pose.orientation.w = 1.0;
+      // poseStampedMsg.pose.position.x = centroid.x();
+      // poseStampedMsg.pose.position.y = centroid.y();
+      // poseStampedMsg.pose.position.z = 0;
+      // NOTE this section of the code gives the pose of the mesh
 
-      Eigen::Vector4f centroid (0.f, 0.f, 0.f, 1.f);
-      pcl::compute3DCentroid (*meshVerticesWorldFrame, centroid); centroid.w () = 1.f;
-      ROS_INFO_STREAM("centroid.x(): " << centroid.x() << std::endl);
-      ROS_INFO_STREAM("centroid.y(): " << centroid.y() << std::endl);
-      ROS_INFO_STREAM("centroid.z(): " << centroid.z() << std::endl);
+      // TODO consider putting this back as an option
       // Eigen::Matrix4f world2Mesh = Eigen::Matrix4f::Identity ();
       // world2Mesh(0,3) = -centroid.x();
       // world2Mesh(1,3) = -centroid.y();
@@ -314,11 +324,7 @@ void SceneCompletionNode::point_cloud_to_mesh(PointCloudT::Ptr cloud,
       //  ROS_INFO_STREAM("PARTIAL CLOUD SIZE: " << partialCloudMeshFrame->size() << std::endl);
       // now we have a mesh with the origin at the center of the base in the world frame of reference
       // lets get the transform from world to mesh center
-       ROS_INFO_STREAM("OBJECT POSE IN FRAME: " << world_frame << std::endl);
-       poseStampedMsg.header.frame_id = world_frame;
-       poseStampedMsg.pose.orientation.w = 1.0;
-       poseStampedMsg.pose.position.x = centroid.x();
-       poseStampedMsg.pose.position.y = centroid.y();
-       poseStampedMsg.pose.position.z = 0;
+      // TODO consider putting this back as an option
    }
+
 }
