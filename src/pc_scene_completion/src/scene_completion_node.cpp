@@ -101,7 +101,7 @@ void SceneCompletionNode::executeCB(const pc_pipeline_msgs::CompleteSceneGoalCon
 
     // wait until n_clouds_per_recognition clouds have been received
     ros::Rate warn_rate(1.0);
-    if(clouds_queue_.empty()){
+    while(clouds_queue_.empty()){
        ROS_WARN("Pointcloud buffer is empty!");
        warn_rate.sleep();
     }
